@@ -1,17 +1,12 @@
+import configparser
 import os
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 
 
-STATEMENT_FOLDER = 'Ведомость'
 
-TEMPLATE_FOLDER = 'Шаблон'
-TEMPLATE_FILENAME = 'квитанция.xlsx'
 
-OUTPUT_FOLDER = 'Квитанции'
-OUTPUT_FILENAME_FORMAT = '{%номер%}_{%месяц%}_{%имя%}.xlsx'
-
-FIRST_ROW = 9
+CONFIG_NAME = "настройки.txt"
 
 
 
@@ -36,8 +31,8 @@ class BillGenerator:
             for cell in row:
                 for key, value in context.items():
                     if key in str(cell.value):
-                        cell.value = str(cell.value.replace(key, value))
-                    output_filename = output_filename.replace(key, value)
+                        cell.value = cell.value.replace(key, str(value))
+                    output_filename = output_filename.replace(key, str(value))
         output_filename_full = os.path.join(OUTPUT_FOLDER, output_filename)
         wb.save(filename=output_filename_full)
 
@@ -46,8 +41,6 @@ class BillGenerator:
         if all([bool(row[cls.get_col_index(col)].value) for col in [
                     cls.StatementCols.NUMBER,
                     cls.StatementCols.NAME,
-                    cls.StatementCols.ACCOUNT,
-                    cls.StatementCols.DEBT,
                 ]]):
             return True
         return False
@@ -66,10 +59,9 @@ class BillGenerator:
 
         statement = load_workbook(filename=statement_filename_full, data_only=True).worksheets[0]
         result = []
-        for row in statement:
+        for row_index in range(FIRST_ROW, LAST_ROW + 1):
+            row = statement[row_index]
             if cls.is_valid(row):
-                print(row)
-
                 context = {
                     '{%номер%}': row[cls.get_col_index(cls.StatementCols.NUMBER)].value,
                     '{%имя%}': row[cls.get_col_index(cls.StatementCols.NAME)].value,
@@ -80,13 +72,25 @@ class BillGenerator:
                     '{%долг_рубли%}': '4043',
                     '{%долг_копейки%}': '00',
                 }
-                print(context['{%номер%}'])
                 result.append(context)
 
         return result
 
 
 if __name__ == '__main__':
+    config = configparser.RawConfigParser()
+    config.read(CONFIG_NAME, encoding="utf-8")
+
+    STATEMENT_FOLDER = config['DEFAULT']['STATEMENT_FOLDER']
+
+    TEMPLATE_FOLDER = config['DEFAULT']['TEMPLATE_FOLDER']
+    TEMPLATE_FILENAME = config['DEFAULT']['TEMPLATE_FILENAME']
+
+    OUTPUT_FOLDER = config['DEFAULT']['OUTPUT_FOLDER']
+    OUTPUT_FILENAME_FORMAT = config['DEFAULT']['OUTPUT_FILENAME_FORMAT']
+
+    FIRST_ROW = int(config['DEFAULT']['FIRST_ROW'])
+    LAST_ROW = int(config['DEFAULT']['LAST_ROW'])
     try:
         bill_generator = BillGenerator()
         result = bill_generator.read_statement()
