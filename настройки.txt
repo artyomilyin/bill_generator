@@ -1,4 +1,4 @@
-[DEFAULT]
+[STRUCTURE]
 # Папка с ведомостью
 STATEMENT_FOLDER = Ведомость
 
@@ -15,3 +15,10 @@ OUTPUT_FILENAME_FORMAT = {%номер%}_{%месяц%}_{%имя%}.xlsx
 # Первый и последний ряды в ведомости
 FIRST_ROW = 9
 LAST_ROW = 170
+
+[COLUMNS]
+# Столбцы
+NUMBER = A
+NAME = C
+ACCOUNT = D
+DEBT = I
