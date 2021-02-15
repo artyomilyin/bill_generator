@@ -22,12 +22,12 @@ class BillGenerator:
     def read_statement(self):
 
         template_filename = os.path.join(
-            self.config['STRUCTURE']['TEMPLATE_FOLDER'],
-            self.config['STRUCTURE']['TEMPLATE_FILENAME']
+            self.config['SETTINGS']['TEMPLATE_FOLDER'],
+            self.config['SETTINGS']['TEMPLATE_FILENAME']
         )
-        statement_folder = self.config['STRUCTURE']['STATEMENT_FOLDER']
-        first_row = int(self.config['STRUCTURE']['FIRST_ROW'])
-        last_row = int(self.config['STRUCTURE']['LAST_ROW'])
+        statement_folder = self.config['SETTINGS']['STATEMENT_FOLDER']
+        first_row = int(self.config['SETTINGS']['FIRST_ROW'])
+        last_row = int(self.config['SETTINGS']['LAST_ROW'])
 
         template_wb = load_workbook(filename=template_filename)
         bill_data = []
@@ -70,8 +70,8 @@ class BillGenerator:
     def fill_template(self, template_wb, context):
         sheet = template_wb.worksheets[0]
 
-        output_filename = self.config['STRUCTURE']['OUTPUT_FILENAME_FORMAT']
-        output_folder = self.config['STRUCTURE']['OUTPUT_FOLDER']
+        output_filename = self.config['SETTINGS']['OUTPUT_FILENAME_FORMAT']
+        output_folder = self.config['SETTINGS']['OUTPUT_FOLDER']
         for row in sheet:
             for cell in row:
                 for key, value in context.items():
@@ -106,31 +106,31 @@ class App:
             'TEMPLATE_FOLDER',
         ]
         for folder in folders_list:
-            if not os.path.exists(self.config['STRUCTURE'][folder]):
-                os.mkdir(self.config['STRUCTURE'][folder])
+            if not os.path.exists(self.config['SETTINGS'][folder]):
+                os.mkdir(self.config['SETTINGS'][folder])
                 self.exit_flag = True
 
     @staticmethod
     def generate_default_config():
         config = configparser.RawConfigParser(allow_no_value=True)
         config.optionxform = str
-        config.add_section('STRUCTURE')
-        config.set('STRUCTURE', '# Папка с ведомостью')
-        config.set('STRUCTURE', 'STATEMENT_FOLDER', 'Ведомость')
-        config.set('STRUCTURE', '')
-        config.set('STRUCTURE', '# Папка с шаблоном квитанции и имя самого файла-шаблона')
-        config.set('STRUCTURE', 'TEMPLATE_FOLDER', 'Шаблон')
-        config.set('STRUCTURE', 'TEMPLATE_FILENAME', 'квитанция.xlsx')
-        config.set('STRUCTURE', ' ')
-        config.set('STRUCTURE', '# Папка, куда будут сложены все квитанции')
-        config.set('STRUCTURE', 'OUTPUT_FOLDER', 'Квитанции')
-        config.set('STRUCTURE', '  ')
-        config.set('STRUCTURE', '# Формат имени выходного файла')
-        config.set('STRUCTURE', 'OUTPUT_FILENAME_FORMAT', '{%номер%}_{%месяц%}_{%имя%}.xlsx')
-        config.set('STRUCTURE', '   ')
-        config.set('STRUCTURE', '# Первый и последний ряды в ведомости')
-        config.set('STRUCTURE', 'FIRST_ROW', '9')
-        config.set('STRUCTURE', 'LAST_ROW', '170')
+        config.add_section('SETTINGS')
+        config.set('SETTINGS', '# Папка с ведомостью')
+        config.set('SETTINGS', 'STATEMENT_FOLDER', 'Ведомость')
+        config.set('SETTINGS', '')
+        config.set('SETTINGS', '# Папка с шаблоном квитанции и имя самого файла-шаблона')
+        config.set('SETTINGS', 'TEMPLATE_FOLDER', 'Шаблон')
+        config.set('SETTINGS', 'TEMPLATE_FILENAME', 'квитанция.xlsx')
+        config.set('SETTINGS', ' ')
+        config.set('SETTINGS', '# Папка, куда будут сложены все квитанции')
+        config.set('SETTINGS', 'OUTPUT_FOLDER', 'Квитанции')
+        config.set('SETTINGS', '  ')
+        config.set('SETTINGS', '# Формат имени выходного файла')
+        config.set('SETTINGS', 'OUTPUT_FILENAME_FORMAT', '{%номер%}_{%месяц%}_{%имя%}.xlsx')
+        config.set('SETTINGS', '   ')
+        config.set('SETTINGS', '# Первый и последний ряды в ведомости')
+        config.set('SETTINGS', 'FIRST_ROW', '9')
+        config.set('SETTINGS', 'LAST_ROW', '170')
 
         config.add_section('COLUMNS')
         config.set('COLUMNS', '# Столбцы')
