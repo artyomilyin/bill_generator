@@ -1,4 +1,6 @@
 import configparser
+from datetime import date
+import locale
 import os
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
@@ -44,6 +46,10 @@ class BillGenerator:
         self.template_wb = template_wb
         self.bill_data = []
 
+        today = date.today()
+        self.month = today.strftime('%B')
+        self.year = today.year
+
         statement_files = [file for file in os.listdir(STATEMENT_FOLDER) if file.endswith(".xlsx")]
         try:
             statement_filename = statement_files[0]
@@ -56,20 +62,23 @@ class BillGenerator:
         for row_index in range(FIRST_ROW, LAST_ROW + 1):
             row = statement[row_index]
             if self.is_valid(row):
+                debt = float(row[self.get_col_index(self.StatementCols.DEBT)].value)
+
                 context = {
                     '{%номер%}': row[self.get_col_index(self.StatementCols.NUMBER)].value,
                     '{%имя%}': row[self.get_col_index(self.StatementCols.NAME)].value,
                     '{%лицевой_счет%}': row[self.get_col_index(self.StatementCols.ACCOUNT)].value,
-                    '{%месяц%}': 'Февраль',
-                    '{%год%}': '2021',
-                    '{%долг%}': row[self.get_col_index(self.StatementCols.DEBT)].value,
-                    '{%долг_рубли%}': '4043',
-                    '{%долг_копейки%}': '00',
+                    '{%месяц%}': self.month,
+                    '{%год%}': today.year,
+                    '{%долг%}': ("%.2f" % debt).replace('.', ','),
+                    '{%долг_рубли%}': "%.f" % debt,
+                    '{%долг_копейки%}': '0',
                 }
                 self.bill_data.append(context)
 
 
 if __name__ == '__main__':
+    locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
     config = configparser.RawConfigParser()
     config.read(CONFIG_NAME, encoding="utf-8")
     structure_conf = config['STRUCTURE']
