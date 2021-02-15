@@ -9,16 +9,6 @@ pipelines:
   default:
     - parallel:
       - step:
-          name: Build
-          caches:
-            - pip
-          script:
-            - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-            - pip install pyinstaller
-            - pyinstaller --onefile bill_generator.py
-          artifacts:
-            - dist/**
-      - step:
           name: Test
           caches:
             - pip
@@ -32,3 +22,13 @@ pipelines:
             # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
             - pip install flake8
             - flake8 . --extend-exclude=dist,build --show-source --statistics
+      - step:
+          name: Build
+          caches:
+            - pip
+          script:
+            - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+            - pip install pyinstaller
+            - pyinstaller --onefile bill_generator.py
+          artifacts:
+            - dist/**
