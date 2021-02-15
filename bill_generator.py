@@ -1,3 +1,4 @@
+from collections import namedtuple
 import configparser
 from datetime import date
 import locale
@@ -7,18 +8,18 @@ from openpyxl.utils import column_index_from_string
 
 
 CONFIG_NAME = "настройки.txt"
+STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS']
 
 
 class BillGenerator:
-    class StatementCols:
-        NUMBER = 'A'
-        NAME = 'C'
-        ACCOUNT = 'D'
-        DEBT = 'I'
-        DEBT_MONTHS = 'J'
+    StatementCols = namedtuple(
+        'StatementCols',
+        STATEMENT_COLUMNS
+    )
 
-    def __init__(self, config):
+    def __init__(self, config, statement_columns):
         self.config = config
+        self.statement_columns = self.StatementCols(*statement_columns)
 
     def read_statement(self):
 
@@ -49,12 +50,12 @@ class BillGenerator:
         for row_index in range(first_row, last_row + 1):
             row = statement[row_index]
             if self.is_valid(row):
-                debt = float(row[self.get_col_index(self.StatementCols.DEBT)].value)
+                debt = float(row[self.get_col_index(self.statement_columns.DEBT)].value)
 
                 context = {
-                    '{%номер%}': row[self.get_col_index(self.StatementCols.NUMBER)].value,
-                    '{%имя%}': row[self.get_col_index(self.StatementCols.NAME)].value,
-                    '{%лицевой_счет%}': row[self.get_col_index(self.StatementCols.ACCOUNT)].value,
+                    '{%номер%}': row[self.get_col_index(self.statement_columns.NUMBER)].value,
+                    '{%имя%}': row[self.get_col_index(self.statement_columns.NAME)].value,
+                    '{%лицевой_счет%}': row[self.get_col_index(self.statement_columns.ACCOUNT)].value,
                     '{%месяц%}': month,
                     '{%год%}': year,
                     '{%долг%}': ("%.2f" % debt).replace('.', ','),
@@ -84,13 +85,13 @@ class BillGenerator:
 
     def is_valid(self, row):
         required_cols = [
-            self.StatementCols.NUMBER,
-            self.StatementCols.NAME,
-            self.StatementCols.DEBT_MONTHS,
+            self.statement_columns.NUMBER,
+            self.statement_columns.NAME,
+            self.statement_columns.DEBT_MONTHS,
         ]
         debt_months = int(self.config['DEBT_MONTHS'])
         if all([bool(row[self.get_col_index(col)].value) for col in required_cols]) \
-                and row[self.get_col_index(self.StatementCols.DEBT_MONTHS)].value >= debt_months:
+                and row[self.get_col_index(self.statement_columns.DEBT_MONTHS)].value >= debt_months:
             return True
         return False
 
@@ -100,7 +101,7 @@ class App:
         self.exit_flag = False
         locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
         if os.path.exists(CONFIG_NAME):
-            self.config = self.read_config()
+            self.config, self.statement_columns = self.read_config()
         else:
             self.config = self.generate_default_config()
             self.exit_flag = True
@@ -158,17 +159,14 @@ class App:
         config.read(CONFIG_NAME, encoding="utf-8")
 
         cols_conf = config['COLUMNS']
-        BillGenerator.StatementCols.NAME = cols_conf['NAME']
-        BillGenerator.StatementCols.NUMBER = cols_conf['NUMBER']
-        BillGenerator.StatementCols.DEBT = cols_conf['DEBT']
-        BillGenerator.StatementCols.ACCOUNT = cols_conf['ACCOUNT']
-        BillGenerator.StatementCols.DEBT_MONTHS = cols_conf['DEBT_MONTHS']
 
-        return config['SETTINGS']
+        statement_columns = [cols_conf[col] for col in STATEMENT_COLUMNS]
+
+        return config['SETTINGS'], statement_columns
 
     def run(self):
         try:
-            bill_generator = BillGenerator(self.config)
+            bill_generator = BillGenerator(self.config, self.statement_columns)
             template_wb, bill_data = bill_generator.read_statement()
             for context in bill_data:
                 bill_generator.fill_template(template_wb, context)
