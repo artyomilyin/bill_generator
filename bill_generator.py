@@ -105,7 +105,7 @@ class App:
         ]
         for folder in folders_list:
             if not os.path.exists(self.config['STRUCTURE'][folder]):
-                os.mkdir(folder)
+                os.mkdir(self.config['STRUCTURE'][folder])
 
     @staticmethod
     def generate_default_config():
