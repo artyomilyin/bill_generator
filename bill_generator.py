@@ -93,11 +93,13 @@ class BillGenerator:
 
 class App:
     def __init__(self):
+        self.exit_flag = False
         locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
         if os.path.exists(CONFIG_NAME):
             self.config = self.read_config()
         else:
             self.config = self.generate_default_config()
+            self.exit_flag = True
         folders_list = [
             'STATEMENT_FOLDER',
             'OUTPUT_FOLDER',
@@ -106,6 +108,7 @@ class App:
         for folder in folders_list:
             if not os.path.exists(self.config['STRUCTURE'][folder]):
                 os.mkdir(self.config['STRUCTURE'][folder])
+                self.exit_flag = True
 
     @staticmethod
     def generate_default_config():
@@ -169,4 +172,7 @@ class App:
 
 if __name__ == '__main__':
     app = App()
-    app.run()
+    if not app.exit_flag:
+        app.run()
+    else:
+        print("Приложение инициализировано. Вложите файлы в соответствующие папки и запустите еще раз.")
