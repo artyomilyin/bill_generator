@@ -95,10 +95,17 @@ class App:
     def __init__(self):
         locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
         if os.path.exists(CONFIG_NAME):
-            self.read_config()
+            self.config = self.read_config()
         else:
-            self.generate_default_config()
-            exit()
+            self.config = self.generate_default_config()
+        folders_list = [
+            'STATEMENT_FOLDER',
+            'OUTPUT_FOLDER',
+            'TEMPLATE_FOLDER',
+        ]
+        for folder in folders_list:
+            if not os.path.exists(self.config['STRUCTURE'][folder]):
+                os.mkdir(folder)
 
     @staticmethod
     def generate_default_config():
@@ -128,19 +135,24 @@ class App:
         config.set('COLUMNS', 'NAME', 'C')
         config.set('COLUMNS', 'ACCOUNT', 'D')
         config.set('COLUMNS', 'DEBT', 'I')
+
         with open(CONFIG_NAME, 'w', encoding='utf-8') as file:
             config.write(file)
 
-    def read_config(self):
+        return config
+
+    @staticmethod
+    def read_config():
         config = configparser.RawConfigParser()
         config.read(CONFIG_NAME, encoding="utf-8")
-        self.config = config
 
         cols_conf = config['COLUMNS']
         BillGenerator.StatementCols.NAME = cols_conf['NAME']
         BillGenerator.StatementCols.NUMBER = cols_conf['NUMBER']
         BillGenerator.StatementCols.DEBT = cols_conf['DEBT']
         BillGenerator.StatementCols.ACCOUNT = cols_conf['ACCOUNT']
+
+        return config
 
     def run(self):
         try:
@@ -150,7 +162,7 @@ class App:
                 bill_generator.fill_template(template_wb, context)
         except PermissionError:
             print("Произошла ошибка. Закройте все файлы Excel перед запуском.")
-        except:
+        except Exception:
             print("Произошла непредвиденная ошибка.")
             raise
 
