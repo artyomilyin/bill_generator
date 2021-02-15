@@ -16,6 +16,8 @@ pipelines:
             - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
             - pip install pyinstaller
             - pyinstaller --onefile bill_generator.py
+          artifacts:
+            - dist/**
       - step:
           name: Test
           caches:
