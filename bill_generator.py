@@ -15,6 +15,7 @@ class BillGenerator:
         NAME = 'C'
         ACCOUNT = 'D'
         DEBT = 'I'
+        DEBT_MONTHS = 'J'
 
     def __init__(self, config):
         self.config = config
@@ -22,12 +23,12 @@ class BillGenerator:
     def read_statement(self):
 
         template_filename = os.path.join(
-            self.config['SETTINGS']['TEMPLATE_FOLDER'],
-            self.config['SETTINGS']['TEMPLATE_FILENAME']
+            self.config['TEMPLATE_FOLDER'],
+            self.config['TEMPLATE_FILENAME']
         )
-        statement_folder = self.config['SETTINGS']['STATEMENT_FOLDER']
-        first_row = int(self.config['SETTINGS']['FIRST_ROW'])
-        last_row = int(self.config['SETTINGS']['LAST_ROW'])
+        statement_folder = self.config['STATEMENT_FOLDER']
+        first_row = int(self.config['FIRST_ROW'])
+        last_row = int(self.config['LAST_ROW'])
 
         template_wb = load_workbook(filename=template_filename)
         bill_data = []
@@ -70,8 +71,8 @@ class BillGenerator:
     def fill_template(self, template_wb, context):
         sheet = template_wb.worksheets[0]
 
-        output_filename = self.config['SETTINGS']['OUTPUT_FILENAME_FORMAT']
-        output_folder = self.config['SETTINGS']['OUTPUT_FOLDER']
+        output_filename = self.config['OUTPUT_FILENAME_FORMAT']
+        output_folder = self.config['OUTPUT_FOLDER']
         for row in sheet:
             for cell in row:
                 for key, value in context.items():
@@ -81,12 +82,15 @@ class BillGenerator:
         output_filename_full = os.path.join(output_folder, output_filename)
         template_wb.save(filename=output_filename_full)
 
-    @classmethod
-    def is_valid(cls, row):
-        if all([bool(row[cls.get_col_index(col)].value) for col in [
-                    cls.StatementCols.NUMBER,
-                    cls.StatementCols.NAME,
-                ]]):
+    def is_valid(self, row):
+        required_cols = [
+            self.StatementCols.NUMBER,
+            self.StatementCols.NAME,
+            self.StatementCols.DEBT_MONTHS,
+        ]
+        debt_months = int(self.config['DEBT_MONTHS'])
+        if all([bool(row[self.get_col_index(col)].value) for col in required_cols]) \
+                and row[self.get_col_index(self.StatementCols.DEBT_MONTHS)].value >= debt_months:
             return True
         return False
 
@@ -106,8 +110,8 @@ class App:
             'TEMPLATE_FOLDER',
         ]
         for folder in folders_list:
-            if not os.path.exists(self.config['SETTINGS'][folder]):
-                os.mkdir(self.config['SETTINGS'][folder])
+            if not os.path.exists(self.config[folder]):
+                os.mkdir(self.config[folder])
                 self.exit_flag = True
 
     @staticmethod
@@ -131,6 +135,9 @@ class App:
         config.set('SETTINGS', '# Первый и последний ряды в ведомости')
         config.set('SETTINGS', 'FIRST_ROW', '9')
         config.set('SETTINGS', 'LAST_ROW', '170')
+        config.set('SETTINGS', '    ')
+        config.set('SETTINGS', '# Количество месяцев просроченных платежей')
+        config.set('SETTINGS', 'DEBT_MONTHS', '3')
 
         config.add_section('COLUMNS')
         config.set('COLUMNS', '# Столбцы')
@@ -138,11 +145,12 @@ class App:
         config.set('COLUMNS', 'NAME', 'C')
         config.set('COLUMNS', 'ACCOUNT', 'D')
         config.set('COLUMNS', 'DEBT', 'I')
+        config.set('COLUMNS', 'DEBT_MONTHS', 'J')
 
         with open(CONFIG_NAME, 'w', encoding='utf-8') as file:
             config.write(file)
 
-        return config
+        return config['SETTINGS']
 
     @staticmethod
     def read_config():
@@ -154,8 +162,9 @@ class App:
         BillGenerator.StatementCols.NUMBER = cols_conf['NUMBER']
         BillGenerator.StatementCols.DEBT = cols_conf['DEBT']
         BillGenerator.StatementCols.ACCOUNT = cols_conf['ACCOUNT']
+        BillGenerator.StatementCols.DEBT_MONTHS = cols_conf['DEBT_MONTHS']
 
-        return config
+        return config['SETTINGS']
 
     def run(self):
         try:
