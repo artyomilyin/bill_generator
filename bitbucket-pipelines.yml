@@ -9,6 +9,14 @@ pipelines:
   default:
     - parallel:
       - step:
+          name: Build
+          caches:
+            - pip
+          script:
+            - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+            - pip install pyinstaller
+            - pyinstaller --onefile bill_generator.py
+      - step:
           name: Test
           caches:
             - pip
