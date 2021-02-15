@@ -16,22 +16,70 @@ class BillGenerator:
         ACCOUNT = 'D'
         DEBT = 'I'
 
+    def __init__(self, config):
+        self.config = config
+
+    def read_statement(self):
+
+        template_filename = os.path.join(
+            self.config['STRUCTURE']['TEMPLATE_FOLDER'],
+            self.config['STRUCTURE']['TEMPLATE_FILENAME']
+        )
+        statement_folder = self.config['STRUCTURE']['STATEMENT_FOLDER']
+        first_row = int(self.config['STRUCTURE']['FIRST_ROW'])
+        last_row = int(self.config['STRUCTURE']['LAST_ROW'])
+
+        template_wb = load_workbook(filename=template_filename)
+        bill_data = []
+
+        statement_files = [file for file in os.listdir(statement_folder) if file.endswith(".xlsx")]
+        try:
+            statement_filename = statement_files[0]
+        except IndexError:
+            print(f"В папке {statement_folder} нет файлов")
+            exit()
+        statement_filename_full = os.path.join(statement_folder, statement_filename)
+
+        statement = load_workbook(filename=statement_filename_full, data_only=True).worksheets[0]
+
+        today = date.today()
+        month = today.strftime('%B')
+        year = today.year
+        for row_index in range(first_row, last_row + 1):
+            row = statement[row_index]
+            if self.is_valid(row):
+                debt = float(row[self.get_col_index(self.StatementCols.DEBT)].value)
+
+                context = {
+                    '{%номер%}': row[self.get_col_index(self.StatementCols.NUMBER)].value,
+                    '{%имя%}': row[self.get_col_index(self.StatementCols.NAME)].value,
+                    '{%лицевой_счет%}': row[self.get_col_index(self.StatementCols.ACCOUNT)].value,
+                    '{%месяц%}': month,
+                    '{%год%}': year,
+                    '{%долг%}': ("%.2f" % debt).replace('.', ','),
+                    '{%долг_рубли%}': "%.f" % debt,
+                    '{%долг_копейки%}': '0',
+                }
+                bill_data.append(context)
+        return template_wb, bill_data
+
     @staticmethod
     def get_col_index(letter):
         return column_index_from_string(letter) - 1
 
-    def fill_template(self, context):
-        sheet = self.template_wb.worksheets[0]
+    def fill_template(self, template_wb, context):
+        sheet = template_wb.worksheets[0]
 
-        output_filename = OUTPUT_FILENAME_FORMAT
+        output_filename = self.config['STRUCTURE']['OUTPUT_FILENAME_FORMAT']
+        output_folder = self.config['STRUCTURE']['OUTPUT_FOLDER']
         for row in sheet:
             for cell in row:
                 for key, value in context.items():
                     if key in str(cell.value):
                         cell.value = cell.value.replace(key, str(value))
                     output_filename = output_filename.replace(key, str(value))
-        output_filename_full = os.path.join(OUTPUT_FOLDER, output_filename)
-        self.template_wb.save(filename=output_filename_full)
+        output_filename_full = os.path.join(output_folder, output_filename)
+        template_wb.save(filename=output_filename_full)
 
     @classmethod
     def is_valid(cls, row):
@@ -42,75 +90,71 @@ class BillGenerator:
             return True
         return False
 
-    def __init__(self, template_wb):
-        self.template_wb = template_wb
-        self.bill_data = []
 
-        today = date.today()
-        self.month = today.strftime('%B')
-        self.year = today.year
-
-        statement_files = [file for file in os.listdir(STATEMENT_FOLDER) if file.endswith(".xlsx")]
-        try:
-            statement_filename = statement_files[0]
-        except IndexError:
-            print(f"В папке {STATEMENT_FOLDER} нет файлов")
+class App:
+    def __init__(self):
+        locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
+        if os.path.exists(CONFIG_NAME):
+            self.read_config()
+        else:
+            self.generate_default_config()
             exit()
-        statement_filename_full = os.path.join(STATEMENT_FOLDER, statement_filename)
 
-        statement = load_workbook(filename=statement_filename_full, data_only=True).worksheets[0]
-        for row_index in range(FIRST_ROW, LAST_ROW + 1):
-            row = statement[row_index]
-            if self.is_valid(row):
-                debt = float(row[self.get_col_index(self.StatementCols.DEBT)].value)
+    @staticmethod
+    def generate_default_config():
+        config = configparser.RawConfigParser(allow_no_value=True)
+        config.optionxform = str
+        config.add_section('STRUCTURE')
+        config.set('STRUCTURE', '# Папка с ведомостью')
+        config.set('STRUCTURE', 'STATEMENT_FOLDER', 'Ведомость')
+        config.set('STRUCTURE', '')
+        config.set('STRUCTURE', '# Папка с шаблоном квитанции и имя самого файла-шаблона')
+        config.set('STRUCTURE', 'TEMPLATE_FOLDER', 'Шаблон')
+        config.set('STRUCTURE', 'TEMPLATE_FILENAME', 'квитанция.xlsx')
+        config.set('STRUCTURE', ' ')
+        config.set('STRUCTURE', '# Папка, куда будут сложены все квитанции')
+        config.set('STRUCTURE', 'OUTPUT_FOLDER', 'Квитанции')
+        config.set('STRUCTURE', '  ')
+        config.set('STRUCTURE', '# Формат имени выходного файла')
+        config.set('STRUCTURE', 'OUTPUT_FILENAME_FORMAT', '{%номер%}_{%месяц%}_{%имя%}.xlsx')
+        config.set('STRUCTURE', '   ')
+        config.set('STRUCTURE', '# Первый и последний ряды в ведомости')
+        config.set('STRUCTURE', 'FIRST_ROW', '9')
+        config.set('STRUCTURE', 'LAST_ROW', '170')
 
-                context = {
-                    '{%номер%}': row[self.get_col_index(self.StatementCols.NUMBER)].value,
-                    '{%имя%}': row[self.get_col_index(self.StatementCols.NAME)].value,
-                    '{%лицевой_счет%}': row[self.get_col_index(self.StatementCols.ACCOUNT)].value,
-                    '{%месяц%}': self.month,
-                    '{%год%}': today.year,
-                    '{%долг%}': ("%.2f" % debt).replace('.', ','),
-                    '{%долг_рубли%}': "%.f" % debt,
-                    '{%долг_копейки%}': '0',
-                }
-                self.bill_data.append(context)
+        config.add_section('COLUMNS')
+        config.set('COLUMNS', '# Столбцы')
+        config.set('COLUMNS', 'NUMBER', 'A')
+        config.set('COLUMNS', 'NAME', 'C')
+        config.set('COLUMNS', 'ACCOUNT', 'D')
+        config.set('COLUMNS', 'DEBT', 'I')
+        with open(CONFIG_NAME, 'w', encoding='utf-8') as file:
+            config.write(file)
+
+    def read_config(self):
+        config = configparser.RawConfigParser()
+        config.read(CONFIG_NAME, encoding="utf-8")
+        self.config = config
+
+        cols_conf = config['COLUMNS']
+        BillGenerator.StatementCols.NAME = cols_conf['NAME']
+        BillGenerator.StatementCols.NUMBER = cols_conf['NUMBER']
+        BillGenerator.StatementCols.DEBT = cols_conf['DEBT']
+        BillGenerator.StatementCols.ACCOUNT = cols_conf['ACCOUNT']
+
+    def run(self):
+        try:
+            bill_generator = BillGenerator(self.config)
+            template_wb, bill_data = bill_generator.read_statement()
+            for context in bill_data:
+                bill_generator.fill_template(template_wb, context)
+        except PermissionError:
+            print("Произошла ошибка. Закройте все файлы Excel перед запуском.")
+        except:
+            print("Произошла непредвиденная ошибка.")
+            raise
 
 
 if __name__ == '__main__':
-    locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
-    config = configparser.RawConfigParser()
-    config.read(CONFIG_NAME, encoding="utf-8")
-    structure_conf = config['STRUCTURE']
-
-    STATEMENT_FOLDER = structure_conf['STATEMENT_FOLDER']
-
-    TEMPLATE_FOLDER = structure_conf['TEMPLATE_FOLDER']
-    TEMPLATE_FILENAME = structure_conf['TEMPLATE_FILENAME']
-
-    OUTPUT_FOLDER = structure_conf['OUTPUT_FOLDER']
-    OUTPUT_FILENAME_FORMAT = structure_conf['OUTPUT_FILENAME_FORMAT']
-
-    FIRST_ROW = int(structure_conf['FIRST_ROW'])
-    LAST_ROW = int(structure_conf['LAST_ROW'])
-
-    cols_conf = config['COLUMNS']
-
-    BillGenerator.StatementCols.NAME = cols_conf['NAME']
-    BillGenerator.StatementCols.NUMBER = cols_conf['NUMBER']
-    BillGenerator.StatementCols.DEBT = cols_conf['DEBT']
-    BillGenerator.StatementCols.ACCOUNT = cols_conf['ACCOUNT']
-
-    try:
-        template_filename = os.path.join(TEMPLATE_FOLDER, TEMPLATE_FILENAME)
-        template_wb = load_workbook(filename=template_filename)
-
-        bill_generator = BillGenerator(template_wb)
-
-        for context in bill_generator.bill_data:
-            bill_generator.fill_template(context)
-    except PermissionError:
-        print("Произошла ошибка. Закройте все файлы Excel перед запуском.")
-    except:
-        print("Произошла непредвиденная ошибка.")
-        raise
+    app = App()
+    app.run()
