@@ -18,8 +18,9 @@ pipelines:
             - pytest -v tests/* --junitxml=test-reports/report.xml
       - step:
           name: Lint code
+          caches:
+            - pip
           script:
-            # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
             - pip install flake8
             - flake8 . --extend-exclude=dist,build --show-source --statistics --ignore=E501
     - step:
@@ -30,7 +31,6 @@ pipelines:
           - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           - pip install pyinstaller
           - pyinstaller --onefile bill_generator.py
-          - ls -l dist/*
           - pipe: atlassian/bitbucket-upload-file:0.1.2
             variables:
               BITBUCKET_USERNAME: $BITBUCKET_USERNAME
