@@ -3,12 +3,19 @@ import configparser
 from datetime import date
 import locale
 import os
+import sys
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 
 
 CONFIG_NAME = "настройки.txt"
 STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS']
+
+
+def exception(msg):
+    print(msg)
+    input("Нажмите любую клавишу.")
+    sys.exit(1)
 
 
 class BillGenerator:
@@ -38,8 +45,7 @@ class BillGenerator:
         try:
             statement_filename = statement_files[0]
         except IndexError:
-            print(f"В папке {statement_folder} нет файлов")
-            exit()
+            exception(f"В папке {statement_folder} нет файлов")
         statement_filename_full = os.path.join(statement_folder, statement_filename)
 
         statement = load_workbook(filename=statement_filename_full, data_only=True).worksheets[0]
@@ -171,10 +177,9 @@ class App:
             for context in bill_data:
                 bill_generator.fill_template(template_wb, context)
         except PermissionError:
-            print("Произошла ошибка. Закройте все файлы Excel перед запуском.")
+            exception("Произошла ошибка. Закройте все файлы Excel перед запуском.")
         except Exception:
-            print("Произошла непредвиденная ошибка.")
-            raise
+            exception("Произошла непредвиденная ошибка.")
 
 
 if __name__ == '__main__':
@@ -182,5 +187,5 @@ if __name__ == '__main__':
     if not app.exit_flag:
         app.run()
     else:
-        print("Приложение инициализировано. "
-              "Вложите файлы в соответствующие папки и запустите еще раз.")
+        exception("Приложение инициализировано. "
+                  "Вложите файлы в соответствующие папки и запустите еще раз.")

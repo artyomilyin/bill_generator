@@ -7,32 +7,10 @@ image: python:3.7
 
 pipelines:
   default:
-    - parallel:
-      - step:
-          name: Test
-          caches:
-            - pip
-          script:
-            - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-            - pip install pytest
-            - pytest -v tests/* --junitxml=test-reports/report.xml
-      - step:
-          name: Lint code
-          caches:
-            - pip
-          script:
-            - pip install flake8
-            - flake8 . --extend-exclude=dist,build --show-source --statistics --ignore=E501
     - step:
-        name: Build
+        name: Lint code
         caches:
           - pip
         script:
-          - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          - pip install pyinstaller
-          - pyinstaller --onefile bill_generator.py
-          - pipe: atlassian/bitbucket-upload-file:0.1.2
-            variables:
-              BITBUCKET_USERNAME: $BITBUCKET_USERNAME
-              BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
-              FILENAME: "dist/bill_generator"
+          - pip install flake8
+          - flake8 . --extend-exclude=dist,build --show-source --statistics --ignore=E501
