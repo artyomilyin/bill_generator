@@ -1,6 +1,7 @@
 from collections import namedtuple
 import configparser
 from datetime import date
+from dateutils import relativedelta
 import locale
 import os
 import sys
@@ -51,18 +52,19 @@ class BillGenerator:
         statement = load_workbook(filename=statement_filename_full, data_only=True).worksheets[0]
 
         today = date.today()
-        month = today.strftime('%B')
         year = today.year
         for row_index in range(first_row, last_row + 1):
             row = statement[row_index]
             if self.is_valid(row):
                 debt = float(row[self.get_col_index(self.statement_columns.DEBT)].value)
+                debt_months = int(row[self.get_col_index(self.statement_columns.DEBT_MONTHS)].value)
+                bill_months = self.get_bill_months(today, debt_months)
 
                 context = {
                     '{%номер%}': row[self.get_col_index(self.statement_columns.NUMBER)].value,
                     '{%имя%}': row[self.get_col_index(self.statement_columns.NAME)].value,
                     '{%лицевой_счет%}': row[self.get_col_index(self.statement_columns.ACCOUNT)].value,
-                    '{%месяц%}': month,
+                    '{%месяц%}': bill_months,
                     '{%год%}': year,
                     '{%долг%}': ("%.2f" % debt).replace('.', ','),
                     '{%долг_рубли%}': "%.f" % debt,
@@ -74,6 +76,15 @@ class BillGenerator:
     @staticmethod
     def get_col_index(letter):
         return column_index_from_string(letter) - 1
+
+    @staticmethod
+    def get_bill_months(today, months):
+        current_month = today.strftime('%B')
+        if months <= 0:
+            return current_month
+
+        first_month = (today - relativedelta(months=months)).strftime('%B')
+        return '%s - %s' % (first_month, current_month)
 
     def fill_template(self, template_wb, context):
         sheet = template_wb.worksheets[0]
