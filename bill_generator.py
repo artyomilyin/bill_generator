@@ -73,26 +73,27 @@ class BillGenerator:
                     '{%долг%}': ("%.2f" % debt).replace('.', ','),
                     '{%долг_рубли%}': "%.f" % debt,
                     '{%долг_копейки%}': '0',
-                    'meters': 1,  # should be 1 by default
-                    '{%последнее_показание_1%}': self.get_value(row, self.statement_columns.METER_LAST),
-                    '{%предыдущее_оплаченное_1%}': self.get_value(row, self.statement_columns.METER_PAID),
+                    '{%последнее_показание_1%}': self.get_value(row, self.statement_columns.METER_LAST) or 0,
+                    '{%предыдущее_оплаченное_1%}': self.get_value(row, self.statement_columns.METER_PAID) or 0,
                     '{%последнее_показание_2%}': '',
                     '{%предыдущее_оплаченное_2%}': '',
                     '{%последнее_показание_3%}': '',
                     '{%предыдущее_оплаченное_3%}': '',
+                    '{%_meters%}': 1,  # should be 1 by default
+                    '{%_debt_months%}': debt_months,
                 }
                 bill_data.append(context)
             elif self.is_second_meter(row):
                 try:
                     previous_context = bill_data[-1]
-                    meter_index = previous_context['meters']
+                    meter_index = previous_context['{%_meters%}'] + 1
                     previous_context.update({
                         '{%%последнее_показание_%s%%}' % meter_index:
-                            self.get_value(row, self.statement_columns.METER_LAST),
+                            self.get_value(row, self.statement_columns.METER_LAST) or 0,
                         '{%%предыдущее_оплаченное_%s%%}' % meter_index:
-                            self.get_value(row, self.statement_columns.METER_PAID),
+                            self.get_value(row, self.statement_columns.METER_PAID) or 0,
                     })
-                    previous_context['meters'] += 1
+                    previous_context['{%_meters%}'] += 1
                 except IndexError:
                     continue
 
@@ -113,19 +114,20 @@ class BillGenerator:
         return '%s - %s' % (first_month, current_month)
 
     def fill_template(self, template_bytes, context):
-        template_wb = load_workbook(template_bytes)
-        sheet = template_wb.worksheets[0]
+        if int(context['{%_debt_months%}']) >= int(self.config['DEBT_MONTHS']):
+            template_wb = load_workbook(template_bytes)
+            sheet = template_wb.worksheets[0]
 
-        output_filename = self.config['OUTPUT_FILENAME_FORMAT']
-        output_folder = self.config['OUTPUT_FOLDER']
-        for row in sheet:
-            for cell in row:
-                for key, value in context.items():
-                    if key in str(cell.value):
-                        cell.value = cell.value.replace(key, str(value))
-                    output_filename = output_filename.replace(key, str(value))
-        output_filename_full = os.path.join(output_folder, output_filename)
-        template_wb.save(filename=output_filename_full)
+            output_filename = self.config['OUTPUT_FILENAME_FORMAT']
+            output_folder = self.config['OUTPUT_FOLDER']
+            for row in sheet:
+                for cell in row:
+                    for key, value in context.items():
+                        if key in str(cell.value):
+                            cell.value = cell.value.replace(key, str(value))
+                        output_filename = output_filename.replace(key, str(value))
+            output_filename_full = os.path.join(output_folder, output_filename)
+            template_wb.save(filename=output_filename_full)
 
     def is_valid(self, row):
         required_cols = [
