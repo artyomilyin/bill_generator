@@ -10,7 +10,7 @@ from openpyxl.utils import column_index_from_string
 
 
 CONFIG_NAME = "настройки.txt"
-STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS']
+STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_LAST', 'METER_PAID']
 
 
 def exception(msg):
@@ -159,11 +159,20 @@ class App:
 
         config.add_section('COLUMNS')
         config.set('COLUMNS', '# Столбцы')
+        config.set('COLUMNS', '# Номер по порядку')
         config.set('COLUMNS', 'NUMBER', 'A')
+        config.set('COLUMNS', '# Имя')
         config.set('COLUMNS', 'NAME', 'C')
+        config.set('COLUMNS', '# Номер лицевого счета')
         config.set('COLUMNS', 'ACCOUNT', 'D')
+        config.set('COLUMNS', '# Долг')
         config.set('COLUMNS', 'DEBT', 'I')
+        config.set('COLUMNS', '# Месяцев задолжность')
         config.set('COLUMNS', 'DEBT_MONTHS', 'J')
+        config.set('COLUMNS', '# Последнее показание счетчика')
+        config.set('COLUMNS', 'METER_LAST', 'K')
+        config.set('COLUMNS', '# Предыдущее оплаченное')
+        config.set('COLUMNS', 'METER_PAID', 'L')
 
         with open(CONFIG_NAME, 'w', encoding='utf-8') as file:
             config.write(file)
