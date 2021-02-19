@@ -1,3 +1,4 @@
+from io import BytesIO
 from collections import namedtuple
 import configparser
 from datetime import date
@@ -13,9 +14,11 @@ CONFIG_NAME = "настройки.txt"
 STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_LAST', 'METER_PAID']
 
 
-def exception(msg):
+def exception(msg, raise_=False, e=None):
     print(msg)
     input("Нажмите любую клавишу.")
+    if raise_:
+        raise e
     sys.exit(1)
 
 
@@ -39,7 +42,8 @@ class BillGenerator:
         first_row = int(self.config['FIRST_ROW'])
         last_row = int(self.config['LAST_ROW'])
 
-        template_wb = load_workbook(filename=template_filename)
+        with open(template_filename, 'rb') as file:
+            template_bytes = BytesIO(file.read())
         bill_data = []
 
         statement_files = [file for file in os.listdir(statement_folder) if file.endswith(".xlsx")]
@@ -69,9 +73,30 @@ class BillGenerator:
                     '{%долг%}': ("%.2f" % debt).replace('.', ','),
                     '{%долг_рубли%}': "%.f" % debt,
                     '{%долг_копейки%}': '0',
+                    'meters': 1,  # should be 1 by default
+                    '{%последнее_показание_1%}': self.get_value(row, self.statement_columns.METER_LAST),
+                    '{%предыдущее_оплаченное_1%}': self.get_value(row, self.statement_columns.METER_PAID),
+                    '{%последнее_показание_2%}': '',
+                    '{%предыдущее_оплаченное_2%}': '',
+                    '{%последнее_показание_3%}': '',
+                    '{%предыдущее_оплаченное_3%}': '',
                 }
                 bill_data.append(context)
-        return template_wb, bill_data
+            elif self.is_second_meter(row):
+                try:
+                    previous_context = bill_data[-1]
+                    meter_index = previous_context['meters']
+                    previous_context.update({
+                        '{%%последнее_показание_%s%%}' % meter_index:
+                            self.get_value(row, self.statement_columns.METER_LAST),
+                        '{%%предыдущее_оплаченное_%s%%}' % meter_index:
+                            self.get_value(row, self.statement_columns.METER_PAID),
+                    })
+                    previous_context['meters'] += 1
+                except IndexError:
+                    continue
+
+        return template_bytes, bill_data
 
     @staticmethod
     def get_value(row, column):
@@ -87,7 +112,8 @@ class BillGenerator:
         first_month = (today - relativedelta(months=months)).strftime('%B')
         return '%s - %s' % (first_month, current_month)
 
-    def fill_template(self, template_wb, context):
+    def fill_template(self, template_bytes, context):
+        template_wb = load_workbook(template_bytes)
         sheet = template_wb.worksheets[0]
 
         output_filename = self.config['OUTPUT_FILENAME_FORMAT']
@@ -205,13 +231,13 @@ class App:
     def run(self):
         try:
             bill_generator = BillGenerator(self.config, self.statement_columns)
-            template_wb, bill_data = bill_generator.read_statement()
+            template_bytes, bill_data = bill_generator.read_statement()
             for context in bill_data:
-                bill_generator.fill_template(template_wb, context)
+                bill_generator.fill_template(template_bytes, context)
         except PermissionError:
             exception("Произошла ошибка. Закройте все файлы Excel перед запуском.")
-        except Exception:
-            exception("Произошла непредвиденная ошибка.")
+        except Exception as e:
+            exception("Произошла непредвиденная ошибка.", raise_=True, e=e)
 
 
 if __name__ == '__main__':
