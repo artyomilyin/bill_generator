@@ -111,6 +111,19 @@ class BillGenerator:
             return True
         return False
 
+    def is_second_meter(self, row):
+        required_cols = [
+            self.statement_columns.METER_LAST,
+            self.statement_columns.METER_PAID,
+        ]
+        required_cols_false = [
+            self.statement_columns.NAME,
+        ]
+        if all([self.get_value(row, col) is not None for col in required_cols]) \
+                and not any(self.get_value(row, col) for col in required_cols_false):
+            return True
+        return False
+
 
 class App:
     def __init__(self):
