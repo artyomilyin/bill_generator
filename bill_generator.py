@@ -56,14 +56,14 @@ class BillGenerator:
         for row_index in range(first_row, last_row + 1):
             row = statement[row_index]
             if self.is_valid(row):
-                debt = float(row[self.get_col_index(self.statement_columns.DEBT)].value)
-                debt_months = int(row[self.get_col_index(self.statement_columns.DEBT_MONTHS)].value)
+                debt = float(self.get_value(row, self.statement_columns.DEBT))
+                debt_months = int(self.get_value(row, self.statement_columns.DEBT_MONTHS))
                 bill_months = self.get_bill_months(today, debt_months)
 
                 context = {
-                    '{%номер%}': row[self.get_col_index(self.statement_columns.NUMBER)].value,
-                    '{%имя%}': row[self.get_col_index(self.statement_columns.NAME)].value,
-                    '{%лицевой_счет%}': row[self.get_col_index(self.statement_columns.ACCOUNT)].value,
+                    '{%номер%}': self.get_value(row, self.statement_columns.NUMBER),
+                    '{%имя%}': self.get_value(row, self.statement_columns.NAME),
+                    '{%лицевой_счет%}': self.get_value(row, self.statement_columns.ACCOUNT),
                     '{%месяц%}': bill_months,
                     '{%год%}': year,
                     '{%долг%}': ("%.2f" % debt).replace('.', ','),
@@ -74,8 +74,9 @@ class BillGenerator:
         return template_wb, bill_data
 
     @staticmethod
-    def get_col_index(letter):
-        return column_index_from_string(letter) - 1
+    def get_value(row, column):
+        col_index = column_index_from_string(column) - 1
+        return row[col_index].value
 
     @staticmethod
     def get_bill_months(today, months):
@@ -106,9 +107,7 @@ class BillGenerator:
             self.statement_columns.NAME,
             self.statement_columns.DEBT_MONTHS,
         ]
-        debt_months = int(self.config['DEBT_MONTHS'])
-        if all([bool(row[self.get_col_index(col)].value) for col in required_cols]) \
-                and row[self.get_col_index(self.statement_columns.DEBT_MONTHS)].value >= debt_months:
+        if all([self.get_value(row, col) is not None for col in required_cols]):
             return True
         return False
 
