@@ -1,7 +1,7 @@
 from io import BytesIO
 from collections import namedtuple
 import configparser
-from datetime import date
+from datetime import datetime
 from dateutils import relativedelta
 import locale
 import os
@@ -16,9 +16,9 @@ STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_
 
 def exception(msg, raise_=False, e=None):
     print(msg)
-    input("Нажмите любую клавишу.")
     if raise_:
         raise e
+    input("Нажмите любую клавишу.")
     sys.exit(1)
 
 
@@ -55,8 +55,10 @@ class BillGenerator:
 
         statement = load_workbook(filename=statement_filename_full, data_only=True).worksheets[0]
 
-        today = date.today()
-        year = today.year
+        month = statement[self.config['MONTH_CELL']].value
+        year = statement[self.config['YEAR_CELL']].value
+        date_string = '{month} {year}'.format(month=month, year=year)
+        today = datetime.strptime(date_string, '%B %Y')
         for row_index in range(first_row, last_row + 1):
             row = statement[row_index]
             if self.is_valid(row):
@@ -107,7 +109,7 @@ class BillGenerator:
     @staticmethod
     def get_bill_months(today, months):
         current_month = today.strftime('%B')
-        if months <= 0:
+        if months <= 1:
             return current_month
 
         first_month = (today - relativedelta(months=months)).strftime('%B')
@@ -196,6 +198,10 @@ class App:
         config.set('SETTINGS', '    ')
         config.set('SETTINGS', '# Количество месяцев просроченных платежей')
         config.set('SETTINGS', 'DEBT_MONTHS', '3')
+        config.set('SETTINGS', '# Ячейка с месяцем')
+        config.set('SETTINGS', 'MONTH_CELL', 'I2')
+        config.set('SETTINGS', '# Ячейка с годом')
+        config.set('SETTINGS', 'YEAR_CELL', 'J2')
 
         config.add_section('COLUMNS')
         config.set('COLUMNS', '# Столбцы')
