@@ -112,7 +112,7 @@ class BillGenerator:
         if months <= 1:
             return current_month
 
-        first_month = (today - relativedelta(months=months)).strftime('%B')
+        first_month = (today - relativedelta(months=months - 1)).strftime('%B')
         return '%s - %s' % (first_month, current_month)
 
     def fill_template(self, template_bytes, context):
