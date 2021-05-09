@@ -6,7 +6,6 @@ from dateutils import relativedelta
 import locale
 import logging
 import os
-import sys
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 
@@ -18,7 +17,7 @@ STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_
 def exception(msg, e=None):
     logger = logging.getLogger()
     logger.exception(msg)
-    input("Нажмите Enter чтобы выйти.")
+    input("Нажмите Enter, чтобы выйти.")
     raise e
 
 
@@ -130,6 +129,7 @@ class BillGenerator:
                         output_filename = output_filename.replace(key, str(value))
             output_filename_full = os.path.join(output_folder, output_filename)
             template_wb.save(filename=output_filename_full)
+            logging.info(f"Сделано: {output_filename}")
 
     def is_valid(self, row):
         required_cols = [
@@ -270,6 +270,8 @@ if __name__ == '__main__':
     app = App()
     if not app.exit_flag:
         app.run()
+        logging.info("Успех! Все получилось. Проверьте файлы.")
+        input("Нажмите Enter, чтобы выйти.")
     else:
         exception("Приложение инициализировано. "
                   "Вложите файлы в соответствующие папки и запустите еще раз.")
