@@ -4,6 +4,7 @@ import configparser
 from datetime import datetime
 from dateutils import relativedelta
 import locale
+import logging
 import os
 import sys
 from openpyxl import load_workbook
@@ -14,12 +15,11 @@ CONFIG_NAME = "настройки.txt"
 STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_LAST', 'METER_PAID']
 
 
-def exception(msg, raise_=False, e=None):
-    print(msg)
-    if raise_:
-        raise e
-    input("Нажмите любую клавишу.")
-    sys.exit(1)
+def exception(msg, e=None):
+    logger = logging.getLogger()
+    logger.exception(msg)
+    input("Нажмите Enter чтобы выйти.")
+    raise e
 
 
 class BillGenerator:
@@ -168,11 +168,13 @@ class App:
             'STATEMENT_FOLDER',
             'OUTPUT_FOLDER',
             'TEMPLATE_FOLDER',
+            'LOG_FOLDER',
         ]
         for folder in folders_list:
             if not os.path.exists(self.config[folder]):
                 os.mkdir(self.config[folder])
                 self.exit_flag = True
+        self.init_logger()
 
     @staticmethod
     def generate_default_config():
@@ -181,6 +183,9 @@ class App:
         config.add_section('SETTINGS')
         config.set('SETTINGS', '# Папка с ведомостью')
         config.set('SETTINGS', 'STATEMENT_FOLDER', 'Ведомость')
+        config.set('SETTINGS', '')
+        config.set('SETTINGS', '# Папка с логами работы программы')
+        config.set('SETTINGS', 'LOG_FOLDER', 'log')
         config.set('SETTINGS', '')
         config.set('SETTINGS', '# Папка с шаблоном квитанции и имя самого файла-шаблона')
         config.set('SETTINGS', 'TEMPLATE_FOLDER', 'Шаблон')
@@ -243,9 +248,22 @@ class App:
             for context in bill_data:
                 bill_generator.fill_template(template_bytes, context)
         except PermissionError:
-            exception("Произошла ошибка. Закройте все файлы Excel перед запуском.")
+            exception("Произошла ошибка. Закройте все файлы Excel перед запуском и попробуйте еще раз.")
         except Exception as e:
-            exception("Произошла непредвиденная ошибка.", raise_=True, e=e)
+            exception("Произошла непредвиденная ошибка. Лучше показать это Артёму.", e=e)
+
+    def init_logger(self):
+        now = datetime.now()
+        logging_filename = os.path.join(self.config['LOG_FOLDER'],
+                                        f'log_{now.strftime("%Y-%m-%d_%H-%M-%S")}.txt')
+
+        file_handler = logging.FileHandler(logging_filename, "w", encoding="UTF-8")
+        stream_handler = logging.StreamHandler()
+
+        root_logger = logging.getLogger()
+        root_logger.addHandler(file_handler)
+        root_logger.addHandler(stream_handler)
+        root_logger.setLevel(logging.DEBUG)
 
 
 if __name__ == '__main__':
