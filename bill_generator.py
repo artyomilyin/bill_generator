@@ -16,6 +16,9 @@ STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_
 
 def exception(msg, e=None):
     logger = logging.getLogger()
+    for k, v in os.environ.items():
+        logger.debug(f'{k}={v}')
+    logger.debug("")
     logger.exception(msg)
     input("Нажмите Enter, чтобы выйти.")
     raise e
