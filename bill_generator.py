@@ -11,7 +11,7 @@ from openpyxl.utils import column_index_from_string
 
 
 CONFIG_NAME = "настройки.txt"
-STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'DEBT', 'DEBT_MONTHS', 'METER_LAST', 'METER_PAID']
+STATEMENT_COLUMNS = ['NUMBER', 'NAME', 'ACCOUNT', 'PAYMENT', 'DEBT', 'DEBT_MONTHS', 'METER_LAST', 'METER_PAID']
 
 
 def exception(msg, e=None):
@@ -72,6 +72,7 @@ class BillGenerator:
                     '{%номер%}': self.get_value(row, self.statement_columns.NUMBER),
                     '{%имя%}': self.get_value(row, self.statement_columns.NAME),
                     '{%лицевой_счет%}': self.get_value(row, self.statement_columns.ACCOUNT),
+                    '{%плановый_взнос%}': self.get_value(row, self.statement_columns.PAYMENT),
                     '{%месяц%}': bill_months,
                     '{%год%}': year,
                     '{%долг%}': ("%.2f" % debt).replace('.', ','),
@@ -219,6 +220,8 @@ class App:
         config.set('COLUMNS', 'NAME', 'C')
         config.set('COLUMNS', '# Номер лицевого счета')
         config.set('COLUMNS', 'ACCOUNT', 'D')
+        config.set('COLUMNS', '# Плановый взнос')
+        config.set('COLUMNS', 'PAYMENT', 'G')
         config.set('COLUMNS', '# Долг')
         config.set('COLUMNS', 'DEBT', 'I')
         config.set('COLUMNS', '# Месяцев задолжность')
