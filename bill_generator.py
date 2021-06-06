@@ -62,6 +62,12 @@ class BillGenerator:
         year = statement[self.config['YEAR_CELL']].value
         date_string = '{month} {year}'.format(month=month, year=year)
         today = datetime.strptime(date_string, '%B %Y')
+        if datetime.now().month - today.month != 1:
+            input(f"Сейчас {datetime.now().strftime('%B')} "
+                  f"и мы должны генерировать квитанции за {(datetime.now() - relativedelta(months=1)).strftime('%B')}. "
+                  f"В ведомости стоит месяц {today.strftime('%B')}.\n"
+                  f"Если все верно, то нажмите Enter для продолжения. "
+                  f"Если неверно, то закройте это окно и внесите изменения в ведомость.")
         for row_index in range(first_row, last_row + 1):
             row = statement[row_index]
             if self.is_valid(row):
