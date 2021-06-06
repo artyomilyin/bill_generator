@@ -1,5 +1,6 @@
 from io import BytesIO
 from collections import namedtuple
+import concurrent.futures
 import configparser
 from datetime import datetime
 from dateutils import relativedelta
@@ -251,8 +252,11 @@ class App:
         try:
             bill_generator = BillGenerator(self.config, self.statement_columns)
             template_bytes, bill_data = bill_generator.read_statement()
-            for context in bill_data:
-                bill_generator.fill_template(template_bytes, context)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [executor.submit(bill_generator.fill_template, template_bytes, context)
+                           for context in bill_data]
+                for future in futures:
+                    future.result()
         except PermissionError:
             exception("Произошла ошибка. Закройте все файлы Excel перед запуском и попробуйте еще раз.")
         except Exception as e:
@@ -273,10 +277,12 @@ class App:
 
 
 if __name__ == '__main__':
+    start_time = datetime.now()
     app = App()
     if not app.exit_flag:
         app.run()
         logging.info("Успех! Все получилось. Проверьте файлы.")
+        logging.info(f"Время выполнения: {datetime.now() - start_time}")
         input("Нажмите Enter, чтобы выйти.")
     else:
         exception("Приложение инициализировано. "
