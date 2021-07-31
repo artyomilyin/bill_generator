@@ -169,7 +169,10 @@ class BillGenerator:
 class App:
     def __init__(self):
         self.exit_flag = False
-        locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
+        try:
+            locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
+        except locale.Error:
+            locale.setlocale(locale.LC_ALL, 'russian')
         if os.path.exists(CONFIG_NAME):
             self.config, self.statement_columns = self.read_config()
         else:
@@ -265,8 +268,6 @@ class App:
                     future.result()
         except PermissionError:
             exception("Произошла ошибка. Закройте все файлы Excel перед запуском и попробуйте еще раз.")
-        except Exception as e:
-            exception("Произошла непредвиденная ошибка. Лучше показать это Артёму.", e=e)
 
     def init_logger(self):
         now = datetime.now()
@@ -284,12 +285,15 @@ class App:
 
 if __name__ == '__main__':
     start_time = datetime.now()
-    app = App()
-    if not app.exit_flag:
-        app.run()
-        logging.info("Успех! Все получилось. Проверьте файлы.")
-        logging.info(f"Время выполнения: {datetime.now() - start_time}")
-        input("Нажмите Enter, чтобы выйти.")
-    else:
-        exception("Приложение инициализировано. "
-                  "Вложите файлы в соответствующие папки и запустите еще раз.")
+    try:
+        app = App()
+        if not app.exit_flag:
+            app.run()
+            logging.info("Успех! Все получилось. Проверьте файлы.")
+            logging.info(f"Время выполнения: {datetime.now() - start_time}")
+            input("Нажмите Enter, чтобы выйти.")
+        else:
+            exception("Приложение инициализировано. "
+                      "Вложите файлы в соответствующие папки и запустите еще раз.")
+    except Exception as e:
+        exception("Произошла непредвиденная ошибка. Лучше показать это Артёму.", e=e)
